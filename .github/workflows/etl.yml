@@ -1,0 +1,60 @@
+# .github/workflows/etl.yml
+# Runs the full ETL pipeline automatically every day at 6:00 AM UTC
+# Also runs whenever you push code changes to main
+
+name: Daily ETL Pipeline
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * *"    # Every day at 6 AM UTC (9 AM EAT)
+  workflow_dispatch:         # Allow manual trigger from GitHub UI
+
+jobs:
+  run-pipeline:
+    name: Run ETL Pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Phase 0 – Generate / Download Data
+        run: python 00_generate_data.py
+        # If using real data, replace with:
+        # run: curl -o data/raw/kcse_students_2024.csv "${{ secrets.DATA_URL }}"
+
+      - name: Phase 1 – Extract
+        run: python 01_extract.py
+
+      - name: Phase 2 – Transform
+        run: python 02_transform.py
+
+      - name: Phase 3 – Load to Database
+        run: python 03_load.py
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Upload logs as artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-logs-${{ github.run_number }}
+          path: logs/
+          retention-days: 14
+
+      - name: Notify on failure (optional)
+        if: failure()
+        run: echo "Pipeline failed – check logs above"
+        # Replace with: curl to Slack webhook, send email, etc.

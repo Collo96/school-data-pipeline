@@ -1,0 +1,25 @@
+# .gitignore — never commit these files
+
+# Sensitive credentials
+.env
+.streamlit/secrets.toml
+
+# Data files (too large for Git)
+data/raw/*.csv
+data/staging/*.parquet
+data/processed/*.parquet
+*.db
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Logs
+logs/*.log
+
+# IDE
+.vscode/
+.idea/
+*.DS_Store

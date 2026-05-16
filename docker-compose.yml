@@ -1,0 +1,60 @@
+# docker-compose.yml
+# Starts a local PostgreSQL database + runs the pipeline + launches the dashboard
+#
+# Usage:
+#   docker compose up --build
+#   Then open: http://localhost:8501
+
+version: "3.9"
+
+services:
+  # ── Local PostgreSQL database ───────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER:     pipeline_user
+      POSTGRES_PASSWORD: pipeline_pass
+      POSTGRES_DB:       school_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pipeline_user -d school_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── ETL pipeline (runs once, then exits) ───────────────────────────────────
+  pipeline:
+    build: .
+    command: >
+      sh -c "
+        sleep 5 &&
+        python 00_generate_data.py &&
+        python 01_extract.py &&
+        python 02_transform.py &&
+        python 03_load.py
+      "
+    environment:
+      DATABASE_URL: postgresql://pipeline_user:pipeline_pass@postgres:5432/school_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+
+  # ── Streamlit dashboard ────────────────────────────────────────────────────
+  dashboard:
+    build: .
+    command: streamlit run 04_dashboard.py --server.port 8501 --server.address 0.0.0.0
+    environment:
+      DATABASE_URL: postgresql://pipeline_user:pipeline_pass@postgres:5432/school_db
+    ports:
+      - "8501:8501"
+    depends_on:
+      - pipeline
+
+volumes:
+  pgdata:
