@@ -62,7 +62,7 @@ def load_data() -> pd.DataFrame:
             )
             st.stop()
 
-    engine = create_engine(db_url)
+    engine = create_engine(db_url.replace("postgresql://", "postgresql+psycopg://"))
     df = pd.read_sql("SELECT * FROM student_results", engine)
     return df
 

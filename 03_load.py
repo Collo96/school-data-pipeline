@@ -62,7 +62,7 @@ def get_engine():
     if not db_url:
         db_url = "sqlite:///data/school_pipeline.db"
         log.warning("DATABASE_URL not set - using local SQLite")
-    engine = create_engine(db_url, echo=False)
+    engine = create_engine(db_url.replace("postgresql://", "postgresql+psycopg://"), echo=False)
     host = db_url.split("@")[-1] if "@" in db_url else db_url
     log.info(f"Connected to: {host}")
     return engine
