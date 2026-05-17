@@ -2,7 +2,7 @@ pandas
 numpy
 pyarrow
 sqlalchemy
-psycopg2-binary
+psycopg[binary]
 python-dotenv
 streamlit
 plotly
